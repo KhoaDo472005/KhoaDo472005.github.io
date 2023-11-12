@@ -31,7 +31,8 @@
     function draw() {
       var x = Math.floor(Math.random()*(canvas.width + 1));
       var y = Math.floor(Math.random()*(canvas.height + 1));
-      var fontsize = Math.floor(Math.random()*(40*canvas.height/100 + 1) + 10*canvas.height/100);
+      var length = (canvas.width>canvas.height) ? canvas.height : canvas.width;
+      var fontsize = Math.floor(Math.random()*(40*length/100 + 1) + 10*length/100);
       ctx.font = fontsize + "px Arial";
       var randomColor = "#" + ((1 << 24) * Math.random() | 0).toString(16);
       ctx.fillStyle = randomColor;
