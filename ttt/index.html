@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ttt</title>
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      background-color: black;
+    }
+    #canvasContainer {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+    }
+</style>
+</head>
+<body>
+  <div id="canvasContainer">
+    <canvas id="myCanvas" width="300" height="300"></canvas>
+  </div>
+
+  <script>
+    let canvas = document.getElementById('myCanvas');
+
+    // resize canvas cho vừa màn hình
+    let screenWidth = window.innerWidth;
+    let screenHeight = window.innerHeight;
+    let squareSize = Math.min(screenWidth, screenHeight);
+    canvas.width = squareSize;
+    canvas.height = squareSize;
+
+    // Hàm vẽ board game lên canvas
+    function displayBoard() {
+      let ctx = canvas.getContext('2d');
+      ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+      let size = 370*canvas.width/1200;  // kích thước mỗi ô
+      let begin = 30*canvas.width/1200;  // Vị trí bắt đầu (chung cho cả toạ độ x và y)
+      for(let i=0; i<9; i++) {
+        let x = ([0, 3, 6].includes(i)) ? begin : ([1, 4, 7].includes(i)) ? begin+size : begin+2*size;
+        let y = (i<3) ? begin : (i<6) ? begin+size : begin+2*size;
+        if(board[i] == "X") ctx.drawImage(iconX, x, y, size, size);
+        if(board[i] == "O") ctx.drawImage(iconO, x, y, size, size);
+      }
+    }
+
+    
+    // CÁC HÀM PHỤ HỖ TRỢ XỬ LÍ KHI CHƠI \\
+
+    //-----------------------------------\\
+
+    // Hàm xử lí khi chơi
+    const handlePlay = (event) => {
+      let x = event.clientX - canvas.getBoundingClientRect().left;
+      let y = event.clientY - canvas.getBoundingClientRect().top;
+
+    };
+
+
+    // THIẾT LẬP BAN ĐẦU \\
+    // Tải sẵn ảnh cho hàm displayBoard
+    let background = new Image(); background.src = './background.png';
+    let iconX = new Image(); iconX.src = './X.png';
+    let iconO = new Image(); iconO.src = './O.png';
+
+    // Tạo board newgame và vẽ khi các ảnh đã load xong.
+    let board = ["X", "", "", "", "O", "", "", "", "X"];
+    Promise.all([background.onload, iconX.onload, iconO.onload]).then(() => displayBoard());
+
+    // Thêm sự kiện xử lí khi chơi
+    canvas.addEventListener('click', handlePlay);
+    //-------------------\\
+  </script>
+</body>
+</html>
