@@ -23,21 +23,40 @@
             width: 100%;
             height: 100%;
             object-fit: contain;
+            display: none;
+        }
+
+        #loading-message {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #fff;
+            text-align: center;
+            font-size: 24px;
+            z-index: 9999;
         }
     </style>
 </head>
 
 <body>
-
+    <div id="loading-message">Loading...</div>
     <div id="image-container">
-        <img src="./original.jpg" id="hover-image" ontouchstart="change1()" ontouchend="change2()" onmousedown="change1()" onmouseup="change2()" oncontextmenu="return false;" ondragstart="return false;">
+        <img src="./original.jpg" id="hover-image" ontouchstart="change1()" ontouchend="change2()"
+            onmousedown="change1()" onmouseup="change2()" oncontextmenu="return false;" ondragstart="return false;">
     </div>
 
     <script>
         const hoverImage = document.getElementById('hover-image')
         const change1 = () => hoverImage.src = './final.jpg'
         const change2 = () => hoverImage.src = './original.jpg'
+        window.onload = function () {
+            document.getElementById('loading-message').style.display = 'none'
+            document.getElementById('image-container').style.display = 'block'
+        }
     </script>
 
 </body>
+
 </html>
