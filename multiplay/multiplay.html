@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multiplay</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root[data-theme="dark"] {
+    --bg: #010417;
+    --bg2: #0a1628;
+    --card: #0d1b35;
+    --primary: #E0E6ED;
+    --secondary: #AAB2BD;
+    --c1: #8E91E0; --c2: #75A2DD; --c3: #F694C9;
+    --c4: #F3D688; --c5: #4CAAD0; --c6: #AEEBFF;
+    --c7: #897EE6; --c8: #D68CC9;
+    --input-bg: #0d1b35; --input-border: #1e3050;
+    --toggle-off: #1e3050; --shadow: rgba(0,0,0,0.5);
+    --radio-border: #2a4060; --btn-bg: #0f1f38;
+    --btn-border: #1e3050; --btn-hover: #1a2f50;
+    --timer-track: #1e3050;
+  }
+  :root[data-theme="light"] {
+    --bg: #DCE6F0;
+    --bg2: #cdd9e8;
+    --card: #e8f0f8;
+    --primary: #3A3F4A;
+    --secondary: #6C7380;
+    --c1: #A3A6F0; --c2: #8BB5E8; --c3: #F8A6D4;
+    --c4: #d4a400; --c5: #6BC0E4; --c6: #6ADABD;
+    --c7: #A49AF0; --c8: #E5A0D7;
+    --input-bg: #dde8f4; --input-border: #b8ccdf;
+    --toggle-off: #b8ccdf; --shadow: rgba(0,0,0,0.12);
+    --radio-border: #b0c4d8; --btn-bg: #dde8f4;
+    --btn-border: #b8ccdf; --btn-hover: #ccd8ea;
+    --timer-track: #b8ccdf;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--primary);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.4s, color 0.4s;
+    padding: 16px;
+  }
+
+  [data-theme="dark"] body {
+    background-image: radial-gradient(ellipse at 20% 20%, rgba(142,145,224,0.08) 0%, transparent 50%),
+                      radial-gradient(ellipse at 80% 80%, rgba(76,170,208,0.06) 0%, transparent 50%);
+  }
+
+  .screen { display: none; width: 100%; max-width: 500px; animation: fadeIn 0.3s ease; }
+  .screen.active { display: block; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 32px 28px;
+    box-shadow: 0 8px 40px var(--shadow);
+    border: 1px solid rgba(255,255,255,0.05);
+    transition: background 0.4s;
+  }
+  [data-theme="light"] .card { border: 1px solid rgba(0,0,0,0.06); }
+
+  /* SETTINGS */
+  .settings-title {
+    font-family: 'Baloo 2', cursive;
+    font-size: 26px;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 28px;
+    letter-spacing: 3px;
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c5));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .setting-row {
+    margin-bottom: 20px;
+  }
+  .setting-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .radio-group { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .radio-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 7px 14px;
+    border-radius: 20px;
+    border: 2px solid var(--radio-border);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--secondary);
+    transition: all 0.2s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .radio-btn:hover { border-color: var(--c1); color: var(--primary); }
+  .radio-btn input { display: none; }
+  .radio-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    border: 2px solid var(--radio-border);
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .radio-btn.selected {
+    border-color: var(--c1);
+    background: rgba(142,145,224,0.1);
+    color: var(--primary);
+  }
+  .radio-btn.selected .radio-dot {
+    background: var(--c1);
+    border-color: var(--c1);
+    box-shadow: 0 0 6px var(--c1);
+  }
+
+  .toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+  }
+  .toggle-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--secondary);
+  }
+  .toggle-switch {
+    position: relative;
+    width: 44px; height: 24px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .toggle-switch input { display: none; }
+  .toggle-track {
+    position: absolute; inset: 0;
+    border-radius: 12px;
+    background: var(--toggle-off);
+    transition: background 0.3s;
+  }
+  .toggle-switch input:checked ~ .toggle-track {
+    background: linear-gradient(90deg, var(--c1), var(--c5));
+  }
+  .toggle-thumb {
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    transition: transform 0.3s;
+  }
+  .toggle-switch input:checked ~ .toggle-track + .toggle-thumb { transform: translateX(20px); }
+
+  .btn-start {
+    width: 100%;
+    padding: 15px;
+    border-radius: 50px;
+    border: none;
+    background: linear-gradient(135deg, var(--c1), var(--c3));
+    color: white;
+    font-family: 'Baloo 2', cursive;
+    font-size: 20px;
+    font-weight: 800;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    box-shadow: 0 4px 20px rgba(142,145,224,0.35);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-start:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(142,145,224,0.5); }
+  .btn-start:active { transform: scale(0.97); opacity: 0.9; }
+
+  /* GAME */
+  .game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+  .game-info-col { flex: 1; }
+  .game-mode-lbl { font-size: 12px; font-weight: 700; color: var(--secondary); margin-bottom: 4px; }
+  .score-row { font-size: 14px; font-weight: 800; color: var(--primary); }
+  .score-val { color: var(--c4); font-size: 18px; font-family: 'Baloo 2', cursive; }
+  .streak-row {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--c4);
+    margin-top: 4px;
+    min-height: 18px;
+  }
+
+  /* Timer */
+  .timer-wrap { position: relative; width: 76px; height: 76px; flex-shrink: 0; }
+  .timer-svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .timer-track { fill: none; stroke: var(--timer-track); stroke-width: 6; }
+  .timer-arc { fill: none; stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 1s linear, stroke 0.5s; }
+  .timer-num {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Baloo 2', cursive;
+    font-size: 22px; font-weight: 800;
+    color: var(--primary);
+    transition: color 0.3s;
+  }
+
+  .question-area { text-align: center; margin: 12px 0 20px; }
+  .question-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+  }
+  .question-txt {
+    font-family: 'Baloo 2', cursive;
+    font-size: clamp(32px, 9vw, 52px);
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: 2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  /* Hide ok btn on touch/mobile — numpad ok btn is used instead */
+  .btn-ok-desktop {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    border-radius: 50px;
+    border: none;
+    background: linear-gradient(135deg, var(--c1), var(--c3));
+    color: white;
+    font-family: 'Baloo 2', cursive;
+    font-size: 20px;
+    font-weight: 800;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    box-shadow: 0 4px 20px rgba(142,145,224,0.35);
+    -webkit-tap-highlight-color: transparent;
+    margin-bottom: 16px;
+  }
+  .btn-ok-desktop:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(142,145,224,0.5); }
+  .btn-ok-desktop:active { transform: scale(0.97); opacity: 0.9; }
+  @media (pointer: coarse) {
+    .btn-ok-desktop { display: none; }
+  }
+  .answer-input {
+    width: 110px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    border: 2px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--primary);
+    font-family: 'Baloo 2', cursive;
+    font-size: clamp(26px, 7vw, 42px);
+    font-weight: 700;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    caret-color: var(--c1);
+    -webkit-appearance: none;
+    flex-shrink: 0;
+  }
+  .answer-input::-webkit-outer-spin-button,
+  .answer-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .answer-input[type=number] { -moz-appearance: textfield; }
+  .answer-input:focus { border-color: var(--c1); box-shadow: 0 0 0 3px rgba(142,145,224,0.2); }
+  .answer-input.correct { border-color: var(--c6); animation: pop 0.35s ease; }
+  .answer-input.wrong { border-color: var(--c3); animation: shake 0.35s ease; }
+  @keyframes pop { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+
+  /* Numpad */
+  .numpad {
+    display: none;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .numpad.show { display: grid; }
+  .num-btn {
+    padding: 15px 10px;
+    border-radius: 12px;
+    border: 2px solid var(--btn-border);
+    background: var(--btn-bg);
+    color: var(--primary);
+    font-family: 'Baloo 2', cursive;
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.12s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .num-btn:active { background: var(--btn-hover); border-color: var(--c1); transform: scale(0.93); }
+  .num-btn.del-btn { color: var(--c3); font-size: 18px; }
+  .num-btn.sign-btn { color: var(--c2); font-size: 16px; }
+  .num-btn.ok-btn {
+    grid-column: span 3;
+    background: linear-gradient(135deg, var(--c1), var(--c3));
+    border-color: transparent;
+    color: white;
+    font-size: 17px;
+    letter-spacing: 1px;
+    padding: 14px;
+  }
+  .num-btn.ok-btn:active { opacity: 0.85; transform: scale(0.97); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 20px; left: 50%;
+    transform: translateX(-50%) translateY(-70px);
+    padding: 9px 22px;
+    border-radius: 30px;
+    font-family: 'Baloo 2', cursive;
+    font-size: 15px;
+    font-weight: 700;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    z-index: 200;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .toast.visible { transform: translateX(-50%) translateY(0); }
+  .toast.ok { background: var(--c6); color: #010417; }
+  .toast.bad { background: var(--c3); color: #010417; }
+
+  /* GAME OVER */
+  .go-title {
+    font-family: 'Baloo 2', cursive;
+    font-size: clamp(44px, 13vw, 66px);
+    font-weight: 800;
+    text-align: center;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--c1), var(--c3), var(--c5));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 4px;
+    animation: glitch 3s infinite;
+  }
+  @keyframes glitch {
+    0%,88%,100% { filter: none; }
+    90% { filter: drop-shadow(3px 0 var(--c3)) drop-shadow(-3px 0 var(--c5)); }
+    92% { filter: drop-shadow(-2px 0 var(--c3)) drop-shadow(2px 0 var(--c5)); }
+    94% { filter: none; }
+    96% { filter: drop-shadow(2px 0 var(--c3)); }
+  }
+  .go-sub { text-align: center; font-size: 13px; font-weight: 700; color: var(--secondary); margin-bottom: 6px; }
+  .go-answer { text-align: center; font-size: 16px; font-weight: 800; color: var(--c4); margin-bottom: 20px; min-height: 24px; }
+  .go-score { text-align: center; margin-bottom: 24px; }
+  .go-score-lbl { font-size: 13px; font-weight: 700; color: var(--secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+  .go-score-num { font-family: 'Baloo 2', cursive; font-size: 52px; font-weight: 800; color: var(--c1); line-height: 1.1; }
+  .go-streak { font-size: 13px; color: var(--c4); font-weight: 700; }
+
+  .btn-replay, .btn-settings {
+    display: block; width: 100%;
+    padding: 14px; border-radius: 50px; border: none;
+    font-family: 'Baloo 2', cursive; font-size: 18px; font-weight: 800;
+    cursor: pointer; letter-spacing: 1px;
+    transition: transform 0.15s, opacity 0.15s;
+    margin-bottom: 10px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-replay { background: linear-gradient(135deg, var(--c1), var(--c3)); color: white; box-shadow: 0 4px 20px rgba(142,145,224,0.35); }
+  .btn-settings { background: linear-gradient(135deg, var(--c5), var(--c7)); color: white; box-shadow: 0 4px 20px rgba(76,170,208,0.3); }
+  .btn-replay:active, .btn-settings:active { transform: scale(0.97); opacity: 0.9; }
+
+  /* Theme btn */
+  .theme-btn {
+    position: fixed; top: 14px; right: 14px;
+    width: 38px; height: 38px;
+    border-radius: 50%; border: 2px solid var(--radio-border);
+    background: var(--card); cursor: pointer;
+    font-size: 17px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s; z-index: 100;
+    box-shadow: 0 2px 10px var(--shadow);
+  }
+  .theme-btn:hover { border-color: var(--c1); transform: rotate(20deg); }
+
+  /* Difficulty slider */
+  .diff-slider-wrap { width: 100%; }
+  .diff-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--secondary);
+  }
+  .diff-labels span { flex: 1; text-align: center; transition: color 0.2s; }
+  .diff-labels span.active { color: var(--c1); }
+  .diff-track-wrap { padding: 8px 0; cursor: pointer; }
+  .diff-track {
+    position: relative;
+    height: 6px;
+    background: var(--timer-track);
+    border-radius: 3px;
+    margin: 0 12px;
+  }
+  .diff-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--c1), var(--c5));
+    transition: width 0.25s cubic-bezier(0.34,1.4,0.64,1);
+    width: 0%;
+  }
+  .diff-dots {
+    position: absolute;
+    top: 50%; left: 0; right: 0;
+    transform: translateY(-50%);
+    display: flex;
+    justify-content: space-between;
+  }
+  .diff-dot {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--card);
+    border: 2px solid var(--radio-border);
+    cursor: pointer;
+    transition: all 0.2s;
+    transform: translateY(0);
+    flex-shrink: 0;
+  }
+  .diff-dot.active {
+    border-color: var(--c1);
+    background: var(--c1);
+    box-shadow: 0 0 10px rgba(142,145,224,0.6);
+    transform: scale(1.25);
+  }
+  .diff-time-hint {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--c5);
+  }
+
+  @media (max-width: 420px) {
+    .card { padding: 24px 18px; }
+    .settings-title { font-size: 22px; }
+    .radio-btn { padding: 6px 10px; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<button class="theme-btn" id="themeBtn">🌙</button>
+<div class="toast" id="toast"></div>
+
+<!-- SETTINGS -->
+<div class="screen active" id="settingsScreen">
+  <div class="card">
+    <div class="settings-title">CÀI ĐẶT</div>
+
+    <div class="setting-row">
+      <div class="setting-label">Phép tính</div>
+      <div class="radio-group" id="opGroup">
+        <label class="radio-btn" data-val="multiply">
+          <input type="radio" name="op" value="multiply">
+          <div class="radio-dot"></div> Nhân
+        </label>
+        <label class="radio-btn" data-val="divide">
+          <input type="radio" name="op" value="divide">
+          <div class="radio-dot"></div> Chia
+        </label>
+        <label class="radio-btn selected" data-val="both">
+          <input type="radio" name="op" value="both" checked>
+          <div class="radio-dot"></div> Nhân và chia
+        </label>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-label">Độ khó</div>
+      <div class="diff-slider-wrap">
+        <div class="diff-labels">
+          <span>Dễ</span><span>Trung bình</span><span>Khó</span><span>Siêu khó</span>
+        </div>
+        <div class="diff-track-wrap">
+          <div class="diff-track">
+            <div class="diff-fill" id="diffFill"></div>
+            <div class="diff-dots">
+              <div class="diff-dot active" data-i="0"></div>
+              <div class="diff-dot" data-i="1"></div>
+              <div class="diff-dot" data-i="2"></div>
+              <div class="diff-dot" data-i="3"></div>
+            </div>
+          </div>
+        </div>
+        <div class="diff-time-hint" id="diffTimeHint">⏱ 30 giây / câu</div>
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-item">
+        <span>Hiệu ứng âm thanh:</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="soundToggle" checked>
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div class="toggle-item">
+        <span>Chế độ tối:</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="darkToggle" checked>
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+    </div>
+
+    <button class="btn-start" id="startBtn">Bắt đầu</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div class="screen" id="gameScreen">
+  <div class="card">
+    <div class="game-header">
+      <div class="game-info-col">
+        <div class="game-mode-lbl" id="gameModeLabel">Nhân và chia - Dễ</div>
+        <div class="score-row">Điểm của bạn: <span class="score-val" id="scoreDisplay">0</span></div>
+      </div>
+      <div class="timer-wrap">
+        <svg class="timer-svg" viewBox="0 0 76 76">
+          <circle class="timer-track" cx="38" cy="38" r="32"/>
+          <circle class="timer-arc" id="timerArc" cx="38" cy="38" r="32"/>
+        </svg>
+        <div class="timer-num" id="timerNum">30</div>
+      </div>
+    </div>
+
+    <div class="question-area">
+      <div class="question-inline">
+        <span class="question-txt" id="questionTxt">7 × 6 =</span>
+        <input type="number" class="answer-input" id="answerInput" placeholder="?" autocomplete="off" inputmode="numeric">
+      </div>
+    </div>
+
+    <!-- Desktop OK button (hidden on touch/mobile) -->
+    <button class="btn-ok-desktop" id="okBtn">✓ OK</button>
+
+    <div class="numpad" id="numpad">
+      <button class="num-btn" data-n="1">1</button>
+      <button class="num-btn" data-n="2">2</button>
+      <button class="num-btn" data-n="3">3</button>
+      <button class="num-btn" data-n="4">4</button>
+      <button class="num-btn" data-n="5">5</button>
+      <button class="num-btn" data-n="6">6</button>
+      <button class="num-btn" data-n="7">7</button>
+      <button class="num-btn" data-n="8">8</button>
+      <button class="num-btn" data-n="9">9</button>
+      <button class="num-btn del-btn" data-n="del">⌫</button>
+      <button class="num-btn" data-n="0">0</button>
+      <button class="num-btn sign-btn" data-n="sign">±</button>
+      <button class="num-btn ok-btn" data-n="ok">✓ OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div class="screen" id="gameoverScreen">
+  <div class="card">
+    <div class="go-title">GAME OVER</div>
+    <div class="go-sub" id="goSub">Nhân và chia - Dễ</div>
+    <div class="go-answer" id="goAnswer"></div>
+    <div class="go-score">
+      <div class="go-score-lbl">Điểm của bạn</div>
+      <div class="go-score-num" id="goScoreNum">0</div>
+    </div>
+    <button class="btn-replay" id="replayBtn">Chơi lại</button>
+    <button class="btn-settings" id="backBtn">Cài đặt</button>
+  </div>
+</div>
+
+<script>
+// ========== AUDIO ==========
+let audioCtx;
+function ctx() { if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
+function beep(f, d, type='sine', v=0.25) {
+  try {
+    const o = ctx().createOscillator(), g = ctx().createGain();
+    o.connect(g); g.connect(ctx().destination);
+    o.frequency.value = f; o.type = type;
+    g.gain.setValueAtTime(v, ctx().currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx().currentTime + d);
+    o.start(); o.stop(ctx().currentTime + d);
+  } catch(e){}
+}
+function playOK()    { beep(523,.1); setTimeout(()=>beep(659,.1),90); setTimeout(()=>beep(784,.2),180); }
+function playBad()   { beep(180,.35,'sawtooth',.2); }
+function playTick()  { beep(900,.04,'square',.08); }
+
+// ========== STATE ==========
+let score=0, currentAns=0;
+let timerMax=30, timerLeft=30, timerId=null;
+let soundOn=true, pendingNext=false;
+let gameMode='both', gameDiff='easy', lastQ='';
+
+// ========== THEME ==========
+const html = document.documentElement;
+const darkToggle = document.getElementById('darkToggle');
+const themeBtn = document.getElementById('themeBtn');
+function setTheme(dark) {
+  html.setAttribute('data-theme', dark?'dark':'light');
+  themeBtn.textContent = dark ? '🌙' : '☀️';
+  darkToggle.checked = dark;
+}
+setTheme(true);
+themeBtn.addEventListener('click', () => setTheme(html.dataset.theme !== 'dark'));
+darkToggle.addEventListener('change', e => setTheme(e.target.checked));
+
+// ========== RADIO GROUPS (op only) ==========
+document.getElementById('opGroup').addEventListener('click', e => {
+  const btn = e.target.closest('.radio-btn');
+  if (!btn) return;
+  document.getElementById('opGroup').querySelectorAll('.radio-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  btn.querySelector('input').checked = true;
+});
+
+// ========== DIFF SLIDER ==========
+const diffVals = ['easy','medium','hard','extreme'];
+const diffTimesMap = { easy:30, medium:20, hard:10, extreme:5 };
+const diffHints = { easy:'⏱ 30 giây / câu', medium:'⏱ 20 giây / câu', hard:'⏱ 10 giây / câu', extreme:'⏱ 5 giây / câu' };
+const fillPcts = [0, 33.3, 66.6, 100];
+let currentDiffIdx = 0;
+
+function setDiff(idx) {
+  currentDiffIdx = idx;
+  const dots = document.querySelectorAll('.diff-dot');
+  const labels = document.querySelectorAll('.diff-labels span');
+  dots.forEach((d,i) => d.classList.toggle('active', i===idx));
+  labels.forEach((l,i) => l.classList.toggle('active', i===idx));
+  document.getElementById('diffFill').style.width = fillPcts[idx] + '%';
+  document.getElementById('diffTimeHint').textContent = diffHints[diffVals[idx]];
+}
+setDiff(0);
+
+document.querySelectorAll('.diff-dot').forEach(dot => {
+  dot.addEventListener('click', () => setDiff(+dot.dataset.i));
+});
+// Also allow clicking on labels
+document.querySelectorAll('.diff-labels span').forEach((lbl, i) => {
+  lbl.style.cursor = 'pointer';
+  lbl.addEventListener('click', () => setDiff(i));
+});
+// Swipe/drag on track
+const diffTrack = document.querySelector('.diff-track-wrap');
+diffTrack.addEventListener('click', e => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const pct = x / rect.width;
+  const idx = Math.min(3, Math.max(0, Math.round(pct * 3)));
+  setDiff(idx);
+});
+document.getElementById('soundToggle').addEventListener('change', e => soundOn = e.target.checked);
+
+// ========== SCREENS ==========
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ========== QUESTION ==========
+function genQ(mode) {
+  const tables = [2,3,4,5,6,7,8,9];
+  let txt, ans, key, tries=0;
+  do {
+    tries++;
+    const t = tables[Math.random()*tables.length|0];
+    const n = (Math.random()*9|0) + 2; // 2..10
+    const type = mode==='both' ? (Math.random()<.5?'multiply':'divide') : mode;
+    if (type==='multiply') {
+      key=`${t}x${n}`; txt=`${t} × ${n} =`; ans=t*n;
+    } else {
+      const p=t*n; key=`${p}÷${t}`; txt=`${p} ÷ ${t} =`; ans=n;
+    }
+  } while (key===lastQ && tries<20);
+  lastQ=key;
+  return {txt, ans};
+}
+
+// ========== TIMER ==========
+const CIRCUM = 2*Math.PI*32;
+const arc = document.getElementById('timerArc');
+const numEl = document.getElementById('timerNum');
+
+function renderTimer(left, max) {
+  const r = left/max;
+  arc.style.strokeDasharray = CIRCUM;
+  arc.style.strokeDashoffset = CIRCUM*(1-r);
+  // Color interpolation: cyan-green -> yellow -> pink
+  let color;
+  if (r > 0.5) {
+    const t=(r-.5)/.5;
+    color = `rgb(${lerp(76,174,t)},${lerp(170,235,t)},${lerp(208,255,t)})`;
+  } else {
+    const t=r/.5;
+    color = `rgb(${lerp(246,76,t)},${lerp(148,170,t)},${lerp(201,208,t)})`;
+  }
+  arc.style.stroke = color;
+  numEl.textContent = left;
+  numEl.style.color = left<=5 ? 'var(--c3)' : '';
+}
+function lerp(a,b,t){ return Math.round(a+(b-a)*t); }
+
+function startTimer(sec) {
+  clearInterval(timerId);
+  timerLeft = sec;
+  renderTimer(timerLeft, timerMax);
+  timerId = setInterval(()=>{
+    timerLeft--;
+    renderTimer(timerLeft, timerMax);
+    if (timerLeft <= 3 && timerLeft > 0) playTick();
+    if (timerLeft <= 0) { clearInterval(timerId); gameOver(); }
+  }, 1000);
+}
+
+// ========== GAME ==========
+const modeLabels = { multiply:'Nhân', divide:'Chia', both:'Nhân và chia' };
+const diffLabels  = { easy:'Dễ', medium:'Trung bình', hard:'Khó', extreme:'Siêu khó' };
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+function startGame() {
+  gameMode = document.querySelector('input[name="op"]:checked').value;
+  gameDiff = diffVals[currentDiffIdx];
+  timerMax = diffTimesMap[gameDiff];
+  score=0; pendingNext=false;
+  document.getElementById('gameModeLabel').textContent = `${modeLabels[gameMode]} - ${diffLabels[gameDiff]}`;
+  document.getElementById('scoreDisplay').textContent = '0';
+  show('gameScreen');
+  // Show numpad on touch devices
+  if (window.matchMedia('(pointer: coarse)').matches) {
+    document.getElementById('numpad').classList.add('show');
+    document.getElementById('answerInput').readOnly = true;
+  }
+  nextQ();
+}
+
+function nextQ() {
+  pendingNext = false;
+  const q = genQ(gameMode);
+  currentAns = q.ans;
+  document.getElementById('questionTxt').textContent = q.txt;
+  const inp = document.getElementById('answerInput');
+  inp.value = '';
+  inp.className = 'answer-input';
+  startTimer(timerMax);
+  if (!window.matchMedia('(pointer: coarse)').matches) inp.focus();
+}
+
+document.getElementById('okBtn').addEventListener('click', submit);
+document.getElementById('answerInput').addEventListener('keydown', e => { if(e.key==='Enter') submit(); });
+
+function submit() {
+  if (pendingNext) return;
+  const inp = document.getElementById('answerInput');
+  const val = parseInt(inp.value);
+  if (isNaN(val)) { inp.focus(); return; }
+  clearInterval(timerId);
+
+  if (val === currentAns) {
+    score++;
+    document.getElementById('scoreDisplay').textContent = score;
+    inp.classList.add('correct');
+    playOK();
+    showToast('✓ Đúng rồi!','ok');
+    pendingNext = true;
+    setTimeout(nextQ, 550);
+  } else {
+    inp.classList.add('wrong');
+    playBad();
+    showToast(`✗ Sai! Đáp án: ${currentAns}`,'bad');
+    pendingNext = true;
+    setTimeout(gameOver, 900);
+  }
+}
+
+function gameOver() {
+  clearInterval(timerId);
+  const sub = `${modeLabels[gameMode]} - ${diffLabels[gameDiff]}`;
+  document.getElementById('goSub').textContent = sub;
+  const q = document.getElementById('questionTxt').textContent;
+  document.getElementById('goAnswer').textContent =
+    timerLeft <= 0 ? `⏰ Hết giờ! ${q} ${currentAns}` : `Đáp án: ${q} ${currentAns}`;
+  document.getElementById('goScoreNum').textContent = score;
+  show('gameoverScreen');
+}
+
+// ========== TOAST ==========
+let toastTid;
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} visible`;
+  clearTimeout(toastTid);
+  toastTid = setTimeout(()=>{ t.classList.remove('visible'); }, 1100);
+}
+
+// ========== GAME OVER BUTTONS ==========
+document.getElementById('replayBtn').addEventListener('click', startGame);
+document.getElementById('backBtn').addEventListener('click', ()=>{ clearInterval(timerId); show('settingsScreen'); });
+
+// ========== NUMPAD ==========
+document.getElementById('numpad').addEventListener('click', e => {
+  const btn = e.target.closest('.num-btn');
+  if (!btn) return;
+  const n = btn.dataset.n;
+  const inp = document.getElementById('answerInput');
+  if (n==='del') { inp.value = inp.value.slice(0,-1); }
+  else if (n==='ok') { submit(); }
+  else if (n==='sign') { inp.value = inp.value.startsWith('-') ? inp.value.slice(1) : '-'+inp.value; }
+  else if (inp.value.replace('-','').length < 4) { inp.value += n; }
+});
+</script>
+</body>
+</html>
