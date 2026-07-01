@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Fireworks</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #000;
+    cursor: crosshair;
+  }
+  canvas {
+    display: block;
+  }
+
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, DPR;
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ---------- Helpers ----------
+function rand(min, max) { return Math.random() * (max - min) + min; }
+function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
+function choice(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+// Realistic firework color palettes (hue-based, with slight variance)
+const PALETTES = [
+  [0, 10],      // red
+  [30, 45],     // gold/orange
+  [45, 55],     // yellow-gold
+  [190, 210],   // blue
+  [270, 290],   // purple
+  [320, 340],   // pink/magenta
+  [140, 160],   // green
+  [175, 185],   // teal/cyan
+];
+
+function firePalette() {
+  const range = choice(PALETTES);
+  const hue = rand(range[0], range[1]);
+  return hue;
+}
+
+// ---------- Particle systems ----------
+// Trail particle for rising rocket
+class Rocket {
+  constructor(x, targetY, hue, big) {
+    this.x = x;
+    this.y = H + 10;
+    this.targetY = targetY;
+    this.vx = rand(-0.4, 0.4);
+    this.vy = rand(-13.5, -15.5) * (big ? 1.08 : 1);
+    this.hue = hue;
+    this.trail = [];
+    this.trailLength = randInt(8, 14);
+    this.big = big;
+    this.exploded = false;
+    this.sparkTimer = 0;
+    this.wobble = rand(0, Math.PI * 2);
+  }
+  update() {
+    this.trail.push({ x: this.x, y: this.y });
+    if (this.trail.length > this.trailLength) this.trail.shift();
+
+    this.wobble += 0.3;
+    this.vx += Math.sin(this.wobble) * 0.015;
+    this.vy += 0.145; // gravity on ascent, slows it down
+    this.x += this.vx;
+    this.y += this.vy;
+
+    if (this.vy >= -1.5 || this.y <= this.targetY) {
+      this.exploded = true;
+    }
+  }
+  draw() {
+    // Trail glow
+    for (let i = 0; i < this.trail.length; i++) {
+      const t = this.trail[i];
+      const alpha = (i / this.trail.length) * 0.5;
+      ctx.beginPath();
+      ctx.fillStyle = `hsla(${this.hue}, 90%, 70%, ${alpha})`;
+      ctx.arc(t.x, t.y, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Head - bright core with slight color
+    ctx.beginPath();
+    const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, 4);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(0.4, `hsla(${this.hue}, 100%, 80%, 0.9)`);
+    grad.addColorStop(1, `hsla(${this.hue}, 100%, 60%, 0)`);
+    ctx.fillStyle = grad;
+    ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// Explosion particle (spark)
+class Spark {
+  constructor(x, y, hue, opts) {
+    this.x = x;
+    this.y = y;
+    const speed = opts.speed;
+    const angle = opts.angle;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.hue = hue + rand(-8, 8);
+    this.alpha = 1;
+    this.life = opts.life;
+    this.age = 0;
+    this.gravity = opts.gravity !== undefined ? opts.gravity : 0.055;
+    this.drag = opts.drag !== undefined ? opts.drag : 0.985;
+    this.size = opts.size || rand(1.3, 2.4);
+    this.type = opts.type || 'normal'; // normal, crackle, willow, streamer
+    this.flicker = rand(0, Math.PI * 2);
+    this.trail = [];
+    this.trailLen = opts.trailLen || 3;
+    this.secondary = opts.secondary || false;
+    this.spawnedSecondary = false;
+    this.crackleTime = opts.type === 'crackle' ? randInt(20, 45) : -1;
+  }
+  update() {
+    this.age++;
+    this.trail.push({ x: this.x, y: this.y, a: this.alpha });
+    if (this.trail.length > this.trailLen) this.trail.shift();
+
+    this.vx *= this.drag;
+    this.vy *= this.drag;
+    this.vy += this.gravity;
+
+    this.x += this.vx;
+    this.y += this.vy;
+
+    const lifeRatio = this.age / this.life;
+    this.alpha = Math.max(0, 1 - lifeRatio);
+
+    // Willow effect: slower fade, more droop
+    if (this.type === 'willow') {
+      this.alpha = Math.max(0, Math.pow(1 - lifeRatio, 1.4));
+    }
+
+    // Crackle: sudden pop of tiny sparks near end of life
+    if (this.type === 'crackle' && this.age === this.crackleTime && !this.spawnedSecondary) {
+      this.spawnedSecondary = true;
+      spawnCrackle(this.x, this.y, this.hue);
+    }
+
+    return this.age < this.life && this.alpha > 0.01;
+  }
+  draw() {
+    // trail
+    if (this.trail.length > 1) {
+      ctx.beginPath();
+      ctx.strokeStyle = `hsla(${this.hue}, 95%, 65%, ${this.alpha * 0.35})`;
+      ctx.lineWidth = this.size * 0.6;
+      ctx.moveTo(this.trail[0].x, this.trail[0].y);
+      for (let i = 1; i < this.trail.length; i++) {
+        ctx.lineTo(this.trail[i].x, this.trail[i].y);
+      }
+      ctx.stroke();
+    }
+
+    let flick = 1;
+    if (this.type === 'crackle') {
+      flick = 0.5 + Math.abs(Math.sin(this.age * 1.2 + this.flicker)) * 0.6;
+    }
+
+    const lightness = this.age < 4 ? 90 : 60;
+    const size = this.size * (this.age < 4 ? 1.8 : 1);
+
+    ctx.beginPath();
+    const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, size * 2.2);
+    grad.addColorStop(0, `hsla(${this.hue}, 100%, ${Math.min(95, lightness + 25)}%, ${this.alpha * flick})`);
+    grad.addColorStop(0.5, `hsla(${this.hue}, 100%, ${lightness}%, ${this.alpha * flick * 0.6})`);
+    grad.addColorStop(1, `hsla(${this.hue}, 100%, ${lightness}%, 0)`);
+    ctx.fillStyle = grad;
+    ctx.arc(this.x, this.y, size * 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.fillStyle = `hsla(${this.hue}, 100%, ${Math.min(98, lightness + 30)}%, ${this.alpha * flick})`;
+    ctx.arc(this.x, this.y, size * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+let sparks = [];
+let rockets = [];
+let flashes = []; // bright flash at explosion point
+
+function spawnCrackle(x, y, hue) {
+  const count = randInt(4, 8);
+  for (let i = 0; i < count; i++) {
+    const angle = rand(0, Math.PI * 2);
+    const speed = rand(0.5, 2.2);
+    sparks.push(new Spark(x, y, hue + rand(-15, 15), {
+      angle, speed,
+      life: randInt(15, 30),
+      gravity: 0.06,
+      drag: 0.94,
+      size: rand(0.8, 1.4),
+      type: 'normal',
+      trailLen: 2
+    }));
+  }
+}
+
+function explode(x, y, hue) {
+  const shapeType = choice(['peony', 'chrysanthemum', 'willow', 'ring', 'crackle', 'dahlia']);
+  const count = shapeType === 'ring' ? randInt(60, 80) : randInt(90, 150);
+  const baseSpeed = rand(3.2, 5.5);
+
+  // bright flash
+  flashes.push({ x, y, life: 8, age: 0, size: rand(30, 55) });
+
+  // slight secondary hue for bi-color fireworks
+  const dualColor = Math.random() < 0.35;
+  const hue2 = dualColor ? firePalette() : hue;
+
+  for (let i = 0; i < count; i++) {
+    let angle, speed;
+    if (shapeType === 'ring') {
+      angle = (i / count) * Math.PI * 2 + rand(-0.03, 0.03);
+      speed = baseSpeed + rand(-0.15, 0.15);
+    } else {
+      angle = rand(0, Math.PI * 2);
+      speed = baseSpeed * rand(0.3, 1) * (shapeType === 'dahlia' ? rand(0.7,1.15) : 1);
+    }
+
+    const useHue = (i % 2 === 0) ? hue : hue2;
+
+    let type = 'normal';
+    let gravity = 0.05;
+    let drag = 0.982;
+    let life = randInt(55, 85);
+    let trailLen = 4;
+
+    if (shapeType === 'willow') {
+      type = 'willow';
+      gravity = 0.09;
+      drag = 0.988;
+      life = randInt(85, 130);
+      trailLen = 8;
+    } else if (shapeType === 'crackle') {
+      type = Math.random() < 0.5 ? 'crackle' : 'normal';
+      life = randInt(45, 70);
+    } else if (shapeType === 'chrysanthemum') {
+      trailLen = 6;
+      life = randInt(65, 95);
+    }
+
+    sparks.push(new Spark(x, y, useHue, {
+      angle, speed, life, gravity, drag, trailLen, type,
+      size: rand(1.2, 2.2)
+    }));
+  }
+}
+
+// ---------- Auto & manual launch ----------
+function launchFirework(xOverride, yOverride) {
+  const x = xOverride !== undefined ? xOverride : rand(W * 0.15, W * 0.85);
+  const targetY = yOverride !== undefined ? yOverride : rand(H * 0.15, H * 0.5);
+  const hue = firePalette();
+  const big = Math.random() < 0.25;
+  rockets.push(new Rocket(x, targetY, hue, big));
+}
+
+let autoTimer = 0;
+let autoInterval = randInt(45, 90);
+let idleTime = 0;
+
+function update() {
+  autoTimer++;
+  idleTime++;
+  if (autoTimer > autoInterval) {
+    autoTimer = 0;
+    autoInterval = randInt(40, 100);
+    launchFirework();
+    if (Math.random() < 0.3) {
+      setTimeout(() => launchFirework(), rand(120, 350));
+    }
+  }
+
+  for (let i = rockets.length - 1; i >= 0; i--) {
+    const r = rockets[i];
+    r.update();
+    if (r.exploded) {
+      explode(r.x, r.y, r.hue);
+      rockets.splice(i, 1);
+    }
+  }
+
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    if (!sparks[i].update()) sparks.splice(i, 1);
+  }
+
+  for (let i = flashes.length - 1; i >= 0; i--) {
+    flashes[i].age++;
+    if (flashes[i].age > flashes[i].life) flashes.splice(i, 1);
+  }
+}
+
+function draw() {
+  // Fading trail effect (night sky persistence)
+  ctx.fillStyle = 'rgba(4,4,12,0.22)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.globalCompositeOperation = 'lighter';
+
+  for (const r of rockets) r.draw();
+  for (const s of sparks) s.draw();
+
+  for (const f of flashes) {
+    const a = 1 - f.age / f.life;
+    ctx.beginPath();
+    const grad = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.size);
+    grad.addColorStop(0, `rgba(255,255,255,${a * 0.9})`);
+    grad.addColorStop(0.3, `rgba(255,240,220,${a * 0.5})`);
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    ctx.arc(f.x, f.y, f.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// initial dark fill
+ctx.fillStyle = '#04040c';
+ctx.fillRect(0, 0, W, H);
+
+// Interaction
+function handlePointer(clientX, clientY) {
+  idleTime = 0;
+  launchFirework(clientX, clientY * 0.6);
+}
+
+canvas.addEventListener('click', (e) => {
+  handlePointer(e.clientX, e.clientY);
+});
+canvas.addEventListener('touchstart', (e) => {
+  const t = e.touches[0];
+  handlePointer(t.clientX, t.clientY);
+  e.preventDefault();
+}, { passive: false });
+
+launchFirework();
+setTimeout(() => launchFirework(), rand(200, 400));
+setTimeout(() => launchFirework(), rand(500, 800));
+
+loop();
+</script>
+</body>
+</html>
